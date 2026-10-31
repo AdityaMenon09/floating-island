@@ -1,5 +1,7 @@
 // Pick the character that sits beside the island. It's optional: the island works the same without.
 //   npm run character                         ask for an image (any time, to change it)
+//   npm run character -- "C:\pics\me.png"     use that image, no questions (scripts, AI assistants);
+//                                             a picture without transparency needs --anyway
 //   node scripts/character.js --if-needed     offer one only the first time (run by `npm start`);
 //                                             the answer defaults to no
 //   node scripts/character.js --remove        go back to no character
@@ -24,6 +26,20 @@ async function main() {
   if (args.includes('--remove')) {
     character.remove(dir);
     console.log('Character removed. Restart the island (tray icon > Quit, then start it again) to see the change.');
+    return;
+  }
+  const given = args.find((a) => !a.startsWith('--'));
+  if (given) {
+    const file = given.trim().replace(/^["'&\s]+|["'\s]+$/g, '');
+    if (!fs.existsSync(file)) throw new Error(`Couldn't find ${file}`);
+    if (!character.IMAGE.test(file)) throw new Error("That isn't an image the island can use. Pick a PNG, JPG, GIF or BMP.");
+    if (character.transparency(file) === 'no' && !args.includes('--anyway')) {
+      throw new Error("That picture has no transparent background, so it'll show as a rectangle. "
+        + 'Pick a PNG with a transparent background, or add --anyway to use it as it is.');
+    }
+    const saved = character.install(file, dir);
+    markAsked();
+    console.log(`Done. Saved to ${saved}. If the island is already running, restart it to see it.`);
     return;
   }
   const firstStart = args.includes('--if-needed');

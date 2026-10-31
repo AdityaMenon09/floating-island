@@ -93,7 +93,8 @@ if (!window.island) {
       onCursor: on('cursor'),
       onBlur: on('blur'),
       onPointerOut: on('pointer-out'),
-      onToggle: on('toggle')
+      onToggle: on('toggle'),
+      onCharacter: on('character')
     };
   })();
 }
