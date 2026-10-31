@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Floating Island</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4.5 10.2 12 4.3l7.5 5.9v8.6c0 .7-.5 1.2-1.2 1.2h-3.8v-5.4h-5V20H5.7c-.7 0-1.2-.5-1.2-1.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 17.5V6.2l10-2v11.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.6" cy="17.6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16.6" cy="15.6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M12 4.2c4.6 0 8.2 3.2 8.2 7.2s-3.6 7.2-8.2 7.2c-1 0-2-.15-2.9-.45L5 19.8l1.1-3.6C4.7 14.9 3.8 13.2 3.8 11.4c0-4 3.6-7.2 8.2-7.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 10h16M8.5 3.5v3.5M15.5 3.5v3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6.2 6v12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M18.2 6.9v10.2c0 .8-.9 1.3-1.6.8l-7.4-5.1a1 1 0 0 1 0-1.6l7.4-5.1c.7-.5 1.6 0 1.6.8z" fill="currentColor"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M17.8 6v12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M5.8 6.9v10.2c0 .8.9 1.3 1.6.8l7.4-5.1a1 1 0 0 0 0-1.6L7.4 6.1c-.7-.5-1.6 0-1.6.8z" fill="currentColor"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M10 17V6.5l8-1.7V15" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="7.7" cy="17.2" r="2.3" fill="currentColor"/><circle cx="15.7" cy="15.4" r="2.3" fill="currentColor"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M13.5 5H19v5.5M19 5l-8 8M17 14v4a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 5 18V8.5A1.5 1.5 0 0 1 6.5 7h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-loop" viewBox="0 0 24 24"><path d="M16.5 3.5 19.5 6.5l-3 3M19.5 6.5H8.5a4 4 0 0 0-4 4v.5M7.5 20.5l-3-3 3-3M4.5 17.5h11a4 4 0 0 0 4-4V13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-paste" viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1M9.5 11h5M9.5 14.5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24">
+      <path d="M4.5 9.6h3l4.2-3.5c.5-.4 1.3 0 1.3.6v10.6c0 .7-.8 1-1.3.6l-4.2-3.5h-3a1 1 0 0 1-1-1V10.6a1 1 0 0 1 1-1z" fill="currentColor"/>
+      <path class="wave wave-1" d="M15.6 9.4a3.6 3.6 0 0 1 0 5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path class="wave wave-2" d="M17.8 7.2a6.8 6.8 0 0 1 0 9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path class="mute-x" d="m16 9.8 4.4 4.4m0-4.4L16 14.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- The character sits behind the island and rides its right edge (positioned by app.js). -->
+<div class="buddy" data-buddy hidden>
+  <div class="buddy-body"><img class="buddy-img" alt=""></div>
+</div>
+
+<!-- The cord she pulls the island down with (drawn by app.js during the drop). -->
+<svg class="cord" data-cord aria-hidden="true">
+  <path class="cord-line"/>
+  <circle class="cord-hook" r="2.6"/>
+  <circle class="cord-bead" r="2.6"/>
+</svg>
+
+<div id="shell" class="shell" data-mode="compact">
+
+  <!-- Compact: the resting pill -->
+  <section class="view view-compact" data-view="compact">
+    <div class="c-lead">
+      <img class="c-art" data-media-art alt="">
+    </div>
+    <div class="eyes c-eyes" data-eyes><i class="eye"></i><i class="eye"></i></div>
+    <div class="c-trail">
+      <span class="c-badge" data-unread-badge></span>
+      <div class="eq"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <!-- HUD: volume while you scroll over the pill -->
+  <section class="view view-hud" data-view="hud">
+    <svg class="vol-icon" data-vol-icon><use href="#i-volume"/></svg>
+    <div class="hud-bar"><span data-vol-fill></span></div>
+    <span class="hud-pct" data-vol-pct></span>
+  </section>
+
+  <!-- Banner: a short-lived "live activity" -->
+  <section class="view view-banner" data-view="banner" data-kind="media">
+    <div class="b-row b-media">
+      <img class="b-art" data-media-art alt="">
+      <div class="b-text">
+        <div class="b-title" data-media-title></div>
+        <div class="b-sub" data-media-artist></div>
+      </div>
+      <div class="eq"><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="b-row b-message">
+      <div class="avatar" data-banner-avatar></div>
+      <div class="b-text">
+        <div class="b-title"><span data-banner-msg-title></span><span class="b-app wa">WhatsApp</span></div>
+        <div class="b-sub" data-banner-msg-body></div>
+      </div>
+    </div>
+    <div class="b-row b-event">
+      <div class="b-badge cal"><svg><use href="#i-calendar"/></svg></div>
+      <div class="b-text">
+        <div class="b-title" data-banner-event-title></div>
+        <div class="b-sub" data-banner-event-when></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Expanded -->
+  <section class="view view-expanded" data-view="expanded">
+    <header class="topbar">
+      <div class="battery" data-battery>
+        <span class="batt-glyph"><span class="batt-level"></span></span>
+        <span class="batt-text"></span>
+      </div>
+      <div class="when"><span class="eyes mini-eyes" data-eyes><i class="eye"></i><i class="eye"></i></span><span data-date></span><b data-clock></b></div>
+      <button class="more" data-more aria-label="More">
+        <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>
+      </button>
+      <div class="menu" data-menu>
+        <button data-action="calendar">Calendar source…</button>
+        <button data-action="buddy" data-buddy-toggle>Hide character</button>
+        <button data-action="autohide" data-autohide-toggle>Keep the pill visible</button>
+        <button data-action="hide">Hide island <kbd>Ctrl Alt I</kbd></button>
+        <button data-action="quit">Quit</button>
+      </div>
+    </header>
+
+    <div class="pages">
+      <!-- Home -->
+      <div class="page page-home" data-page="home">
+        <article class="card card-music" data-open="music">
+          <div class="card-label">Music</div>
+          <div class="mc-art art-frame"><img data-media-art alt=""><svg class="art-empty"><use href="#i-note"/></svg></div>
+          <div class="mc-meta">
+            <div class="mc-title" data-media-title></div>
+            <div class="mc-sub" data-media-status></div>
+          </div>
+          <div class="mc-controls">
+            <button class="ctl" data-cmd="prev" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+            <button class="play-btn" data-cmd="toggle" data-pp="media" aria-label="Play or pause">
+              <svg class="pp" viewBox="0 0 24 24"><path class="pp-a"/><path class="pp-b"/></svg>
+            </button>
+            <button class="ctl" data-cmd="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
+          </div>
+          <div class="hairline"><span data-media-progress></span></div>
+        </article>
+
+        <article class="card card-next" data-open="calendar">
+          <div class="card-label" data-next-label>Up next</div>
+          <div class="nc-meta">
+            <div class="nc-title" data-next-title></div>
+            <div class="nc-sub" data-next-when></div>
+          </div>
+          <div class="hairline"><span data-next-progress></span></div>
+        </article>
+
+        <article class="card card-jp" data-jp-mini>
+          <div class="card-label">日本語<span class="card-sub" data-jp-deck-name></span></div>
+          <div class="jp-mini-stage" data-jp-mini-stage></div>
+          <div class="jp-mini-hint">tap to flip</div>
+        </article>
+      </div>
+
+      <!-- Music -->
+      <div class="page page-music" data-page="music">
+        <div class="mp-art art-frame"><img data-media-art alt=""><svg class="art-empty"><use href="#i-note"/></svg></div>
+        <div class="mp-meta">
+          <div class="mp-app-row">
+            <span class="mp-app" data-media-app></span>
+            <button class="loop-chip" data-loop-chip hidden title="Clear the loop">
+              <svg><use href="#i-loop"/></svg><span data-loop-range></span><span class="loop-x">✕</span>
+            </button>
+          </div>
+          <div class="mp-title" data-media-title></div>
+          <div class="mp-artist" data-media-artist></div>
+        </div>
+        <div class="mp-controls">
+          <button class="ctl" data-cmd="prev" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+          <button class="play-btn big" data-cmd="toggle" data-pp="media" aria-label="Play or pause">
+            <svg class="pp" viewBox="0 0 24 24"><path class="pp-a"/><path class="pp-b"/></svg>
+          </button>
+          <button class="ctl" data-cmd="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
+        </div>
+        <div class="mp-progress">
+          <span class="mp-time" data-media-elapsed>0:00</span>
+          <div class="scrub" data-scrub>
+            <canvas class="petals" data-petals aria-hidden="true"></canvas>
+            <span class="scrub-head"></span>
+            <span class="loop-mark a" data-loop-mark="a" title="Loop start (drag to adjust)"></span>
+            <span class="loop-mark b" data-loop-mark="b" title="Loop end (drag to adjust)"></span>
+            <span class="scrub-knob"></span>
+            <span class="scrub-tip" data-scrub-tip></span>
+          </div>
+          <span class="mp-time" data-media-duration>0:00</span>
+        </div>
+        <div class="mp-volume vol">
+          <button class="ctl small" data-mute aria-label="Mute"><svg class="vol-icon" data-vol-icon><use href="#i-volume"/></svg></button>
+          <div class="slider" data-vol-slider><span class="slider-fill" data-vol-fill></span><span class="slider-knob"></span></div>
+          <span class="vol-pct" data-vol-pct></span>
+        </div>
+        <!-- Right-click on the timeline -->
+        <div class="loop-menu" data-loop-menu>
+          <button data-loop-set="a">Loop from here <span class="t" data-loop-at></span></button>
+          <button data-loop-set="b">Loop until here <span class="t" data-loop-at></span></button>
+          <button data-loop-clear>Clear loop</button>
+        </div>
+        <div class="mp-empty">
+          <svg><use href="#i-music"/></svg>
+          <div><b>Nothing playing</b><span>Start something in Spotify, a browser or any player and it shows up here.</span></div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="page page-messages" data-page="messages">
+        <div class="list-head">
+          <span class="lh-title"><span class="wa-dot"></span>WhatsApp</span>
+          <span class="lh-sub" data-msg-summary></span>
+          <button class="link-btn" data-open-whatsapp><svg><use href="#i-open"/></svg>Open</button>
+        </div>
+        <div class="list" data-msg-list></div>
+        <div class="list-empty" data-msg-empty></div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="page page-calendar" data-page="calendar">
+        <div class="list-head">
+          <span class="lh-title"><span class="cal-dot"></span>Calendar</span>
+          <span class="lh-sub" data-cal-summary></span>
+          <button class="link-btn icon-only" data-cal-refresh title="Check for changes now" aria-label="Check for changes now"><svg><use href="#i-refresh"/></svg></button>
+          <button class="link-btn" data-open-calendar><svg><use href="#i-open"/></svg>Open</button>
+        </div>
+        <div class="list" data-cal-list></div>
+        <div class="cal-setup" data-cal-setup>
+          <p class="setup-line"><b>Live</b> · Calendar settings › your calendar › Integrate calendar › copy the <b>Secret address in iCal format</b>, then Paste link.</p>
+          <p class="setup-line"><b>Snapshot</b> · Settings › Import &amp; export › Export, then Import the .zip. New events need a fresh export.</p>
+          <div class="setup-row">
+            <button class="pill-btn accent" data-cal-paste><svg><use href="#i-paste"/></svg>Paste link</button>
+            <button class="pill-btn" data-cal-import>Import .zip</button>
+            <span class="setup-error" data-cal-error></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Japanese flashcards (kana and words from the Japanese tracker) -->
+      <div class="page page-japanese" data-page="japanese">
+        <div class="jp-stage" data-jp-stage></div>
+        <div class="jp-side">
+          <div class="chips jp-decks">
+            <span class="chip-glider"></span>
+            <button class="chip" data-deck="hira" title="Hiragana">あ</button>
+            <button class="chip" data-deck="kata" title="Katakana">ア</button>
+            <button class="chip" data-deck="words" title="Words">語</button>
+          </div>
+          <div class="jp-progress">
+            <div class="jp-learned" data-jp-learned></div>
+            <div class="bar"><span data-jp-bar></span></div>
+          </div>
+          <div class="jp-foot">
+            <div class="jp-hint">Tap the card to flip</div>
+            <div class="jp-actions">
+              <button class="jp-btn again" data-jp-grade="again">Again</button>
+              <button class="jp-btn good" data-jp-grade="good">Got it</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="page page-notes" data-page="notes">
+        <div class="list-head">
+          <span class="lh-title"><span class="emoji">📝</span>Notes</span>
+          <span class="lh-sub" data-notes-state></span>
+          <span class="lh-sub notes-hint">Esc when done</span>
+        </div>
+        <textarea class="notes" data-notes spellcheck="false" placeholder="Jot something down…"></textarea>
+      </div>
+
+    </div>
+
+    <nav class="dock">
+      <span class="dock-glider"></span>
+      <button class="dock-btn" data-page="home"><svg><use href="#i-home"/></svg><span class="dock-label">Home</span></button>
+      <button class="dock-btn" data-page="music"><svg><use href="#i-music"/></svg><span class="dock-label">Music</span></button>
+      <button class="dock-btn" data-page="messages"><svg><use href="#i-chat"/></svg><span class="dock-label">Messages</span><span class="dock-badge" data-unread-badge></span></button>
+      <button class="dock-btn" data-page="calendar"><svg><use href="#i-calendar"/></svg><span class="dock-label">Calendar</span></button>
+      <button class="dock-btn" data-page="japanese"><span class="dock-glyph">あ</span><span class="dock-label">日本語</span></button>
+      <button class="dock-btn" data-page="notes"><span class="dock-emoji">📝</span><span class="dock-label">Notes</span></button>
+      <button class="dock-vol vol" data-mute aria-label="Mute or unmute (scroll to change volume)"><svg class="vol-icon" data-vol-icon><use href="#i-volume"/></svg></button>
+    </nav>
+  </section>
+</div>
+
+<script src="preview-bridge.js"></script>
+<script src="spring.js"></script>
+<script src="japanese-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

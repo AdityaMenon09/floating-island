@@ -1,0 +1,4 @@
+node_modules/
+captures/
+# Personal art (e.g. a character image) stays out of Git.
+assets/private/

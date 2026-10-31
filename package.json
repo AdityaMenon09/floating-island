@@ -1,0 +1,33 @@
+{
+  "name": "floating-island",
+  "productName": "Floating Island",
+  "version": "0.6.0",
+  "private": true,
+  "description": "A floating Dynamic-Island-style panel for the Windows desktop.",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "win32"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/ensure-electron.js",
+    "prestart": "node scripts/character.js --if-needed",
+    "start": "electron .",
+    "character": "node scripts/character.js",
+    "safe": "electron . --safe-graphics",
+    "capture": "electron . --capture",
+    "selftest": "electron . --selftest",
+    "check:calendar": "electron . --check-calendar",
+    "demo:pull": "electron . --demo-pull",
+    "record:pull": "electron . --record-pull"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^45.2.0"
+  },
+  "dependencies": {
+    "ical.js": "^2.2.1"
+  }
+}
