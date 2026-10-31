@@ -1,6 +1,7 @@
-// Pick the character that sits beside the island.
+// Pick the character that sits beside the island. It's optional: the island works the same without.
 //   npm run character                         ask for an image (any time, to change it)
-//   node scripts/character.js --if-needed     ask only the first time (run by `npm start`)
+//   node scripts/character.js --if-needed     offer one only the first time (run by `npm start`);
+//                                             the answer defaults to no
 //   node scripts/character.js --remove        go back to no character
 const fs = require('node:fs');
 const path = require('node:path');
@@ -25,17 +26,12 @@ async function main() {
     console.log('Character removed. Restart the island (tray icon > Quit, then start it again) to see the change.');
     return;
   }
-  if (args.includes('--if-needed')) {
-    // Only on a first start in a terminal: never when there's already a picture, when it was skipped
-    // before, or when nobody is there to answer.
+  const firstStart = args.includes('--if-needed');
+  if (firstStart) {
+    // Only on a first start in a terminal: never when there's already a picture, when it was
+    // answered before, or when nobody is there to answer.
     if (fs.existsSync(character.characterFile(dir)) || readConfig().characterAsked || !process.stdin.isTTY) return;
   }
-
-  console.log('');
-  console.log('  Floating Island can show a character beside the island: an anime character, a pet, anything.');
-  console.log('  Use a PNG with a TRANSPARENT background for the best look (anything else shows as a rectangle).');
-  console.log('  Tip: drag the image file into this window to paste its path. Press Enter to skip.');
-  console.log('');
 
   // Lines are queued as they arrive (a fast paste or piped input can come before the question),
   // and the end of input counts as skipping.
@@ -48,6 +44,25 @@ async function main() {
     return done ? '' : value;
   };
   try {
+    console.log('');
+    if (firstStart) {
+      console.log('  Optional: Floating Island can show a character beside the island (an anime character, a');
+      console.log('  pet, anything) that pulls it down. Without one, the island simply drops down by itself.');
+      console.log('');
+      const want = await ask('  Add a character now? (y/N) ');
+      if (!/^y/i.test(want.trim())) {
+        markAsked();
+        console.log('  No character. You can add one any time with: npm run character');
+        console.log('');
+        return;
+      }
+      console.log('');
+    } else {
+      console.log('  Pick a character to sit beside the island (an anime character, a pet, anything).');
+    }
+    console.log('  Use a PNG with a TRANSPARENT background for the best look (anything else shows as a rectangle).');
+    console.log('  Tip: drag the image file into this window to paste its path. Press Enter to skip.');
+    console.log('');
     for (;;) {
       const answer = (await ask('  Image file: ')).trim().replace(/^["'&\s]+|["'\s]+$/g, '');
       if (!answer) {

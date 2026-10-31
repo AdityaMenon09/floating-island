@@ -7,6 +7,11 @@
   const bridge = window.island;
   // Test runs (capture / selftest) pass ?demo: never load or save personal data then.
   const DEMO = new URLSearchParams(location.search).has('demo');
+  // Errors in this page go to island.log in the data folder (the browser preview has no log).
+  if (bridge.log) {
+    window.addEventListener('error', (e) => bridge.log((e.error && e.error.stack) || e.message));
+    window.addEventListener('unhandledrejection', (e) => bridge.log(`rejection: ${(e.reason && e.reason.stack) || e.reason}`));
+  }
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -1357,9 +1362,10 @@
     setTimeout(() => btn.classList.remove('spinning'), 8000); // in case no answer comes back
     bridge.refreshCalendar();
   });
-  // Opening the island is a good moment to look for changes, if the last look is over a minute old.
+  // Opening the island is a good moment to look for changes: if the last look is over a minute old,
+  // failed, or never arrived (main skips it quickly when there's truly nothing set up).
   function refreshCalendarIfStale() {
-    if (calendar.configured && (!calendar.fetchedAt || Date.now() - calendar.fetchedAt > 60000)) bridge.refreshCalendar();
+    if (!calendar.configured || calendar.error || !calendar.fetchedAt || Date.now() - calendar.fetchedAt > 60000) bridge.refreshCalendar();
   }
   // From the tray: paste or import happened outside the island; show the outcome on the Calendar page.
   bridge.onCalendarResult((r) => {

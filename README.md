@@ -1,7 +1,7 @@
 # Floating Island
 
 A Dynamic Island for the Windows desktop. It hides as a thin line at the top of your screen. Point at
-the line and it drops down, with a character of your choice pulling it open. Then it shows:
+the line and it drops down (pulled open by a character of your choice, if you add one). Then it shows:
 
 - **Music**: whatever's playing (Spotify, YouTube in a browser, any app Windows knows about), with
   album art, play/pause, skip, a seekable timeline and a volume slider. Right-click the timeline to
@@ -43,17 +43,22 @@ npm install
 npm start
 ```
 
-The first time, it asks for a **character image**: the little figure that sits beside the island and
-pulls it down. Use a **PNG with a transparent background** (anything else shows as a rectangle). You
-can drag the file into the terminal window to paste its path, or press Enter to skip.
+The first time, it asks whether you want a **character**: a little figure that sits beside the island
+and pulls it down. It's optional: press Enter for no, and the island works just the same without one.
+If you say yes, pick a **PNG with a transparent background** (anything else shows as a rectangle).
+You can drag the file into the terminal window to paste its path.
 
-Change it any time with:
+Add or change one any time with:
 
 ```bash
 npm run character
 ```
 
-or from the tray icon: **Change character…**
+or from the tray icon: **Change character…**. To go back to none:
+
+```bash
+npm run character -- --remove
+```
 
 After the first time you can start it without a terminal by double-clicking **Floating Island.cmd**.
 

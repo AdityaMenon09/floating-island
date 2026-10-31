@@ -1,7 +1,12 @@
 // The renderer's only door to the main process.
 const { contextBridge, ipcRenderer } = require('electron');
 
-const on = (channel) => (fn) => ipcRenderer.on(channel, (_e, payload) => fn(payload || {}));
+// Errors go to main's island.log. One thrown inside a handler below never reaches the page's own
+// error event (app.js listens there), so each handler reports its own.
+const report = (text) => ipcRenderer.send('island:log', String(text));
+const on = (channel) => (fn) => ipcRenderer.on(channel, (_e, payload) => {
+  try { fn(payload || {}); } catch (err) { report(`${channel}: ${(err && err.stack) || err}`); }
+});
 
 contextBridge.exposeInMainWorld('island', {
   setInteractive: (value) => ipcRenderer.send('island:interactive', !!value),
@@ -17,6 +22,7 @@ contextBridge.exposeInMainWorld('island', {
   importCalendar: () => ipcRenderer.invoke('calendar:import'),
   refreshCalendar: () => ipcRenderer.send('calendar:refresh'),
   current: () => ipcRenderer.invoke('state:current'),
+  log: (text) => report(text),
   onMedia: on('media'),
   onArt: on('media:art'),
   onVolume: on('volume'),

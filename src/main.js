@@ -2,9 +2,10 @@
 // the Windows bridge (bridge.ps1: media, volume, WhatsApp) and the calendar feed. All drawing and
 // motion happen in the renderer.
 
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut, clipboard, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut, clipboard, shell, dialog, powerMonitor } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { spawn, spawnSync } = require('node:child_process');
 const calendarFiles = require('./calendar-files');
 const characterArt = require('./character');
@@ -22,6 +23,9 @@ const RECORD_PULL = process.argv.includes('--record-pull');
 // Test runs never show real messages or events; they get the demo data below.
 const DEMO = CAPTURE || SELFTEST || DEMO_PULL || RECORD_PULL;
 const SHORTCUT = 'Control+Alt+I';
+
+// FLOATING_ISLAND_DATA points the whole app at another data folder (tests; scripts/ honour it too).
+if (process.env.FLOATING_ISLAND_DATA) app.setPath('userData', path.resolve(process.env.FLOATING_ISLAND_DATA));
 
 // Some graphics drivers draw transparent windows as a black box; software compositing avoids it.
 if (SAFE_GRAPHICS) app.disableHardwareAcceleration();
@@ -93,6 +97,23 @@ const last = {
   calendar: { configured: false, events: [] },
   character: null // read once the app is ready (it needs the data folder's path)
 };
+
+// A small log of what went wrong, in the data folder (island.log), for problems nobody was there to
+// see, like a start at Windows sign-in. Never message text, event titles or the calendar link.
+const LOG_LIMIT = 256 * 1024;
+const scrub = (text) => String(text).replace(/https?:\/\/\S+/g, '<link>').replace(/private-[^\s/"']+/g, '<private>');
+function log(...parts) {
+  if (DEMO) return;
+  try {
+    const file = path.join(app.getPath('userData'), 'island.log');
+    try { if (fs.statSync(file).size > LOG_LIMIT) fs.renameSync(file, `${file}.old`); } catch { /* no log yet */ }
+    fs.appendFileSync(file, `${new Date().toISOString()} ${scrub(parts.join(' '))}\n`);
+  } catch { /* logging must never break the island */ }
+}
+// These replace Electron's error dialog, so print as well: test runs (which don't log) and a
+// terminal `npm start` still show the error.
+process.on('uncaughtException', (err) => { console.error(err); log('main error:', (err && err.stack) || err); });
+process.on('unhandledRejection', (err) => { console.error(err); log('main rejection:', (err && err.stack) || err); });
 
 // Test runs stay out of the single-instance lock, so they work alongside your running island.
 if (!DEMO && !CHECK_CALENDAR && !SET_LOGIN) {
@@ -245,12 +266,54 @@ function calendarIdFromUrl(url) {
   try { return m ? decodeURIComponent(m[1]).toLowerCase() : null; } catch { return null; }
 }
 
+// A refresh that has been going this long is treated as stuck and no longer blocks new ones; failed
+// fetches are retried sooner than the regular cadence (at sign-in the network may not be up yet).
+const CALENDAR_STUCK = 45 * 1000;
+const CALENDAR_RETRY = [20 * 1000, 60 * 1000, 2 * 60 * 1000];
 let calendarTimer = null;
-let calendarBusy = false;
-async function refreshCalendar() {
-  if (DEMO || calendarBusy) return;
-  calendarBusy = true;
-  try { await readCalendars(); } finally { calendarBusy = false; }
+let calendarRetry = null;
+let calendarRetries = 0;
+let calendarBusySince = 0;
+let calendarOutcome = '';
+async function refreshCalendar(reason = 'timer') {
+  if (DEMO) return;
+  if (calendarBusySince) {
+    if (Date.now() - calendarBusySince < CALENDAR_STUCK) return;
+    log(`calendar: a refresh has hung for ${Math.round((Date.now() - calendarBusySince) / 1000)} s; starting a new one`);
+  }
+  const started = Date.now();
+  calendarBusySince = started;
+  try {
+    await readCalendars();
+  } catch (err) {
+    log('calendar refresh failed:', (err && err.stack) || err);
+  } finally {
+    if (calendarBusySince === started) calendarBusySince = 0;
+  }
+  const c = last.calendar;
+  const outcome = `configured=${c.configured} events=${c.events.length} source=${c.source || '-'} error=${c.error || 'none'}`;
+  if (outcome !== calendarOutcome) log(`calendar (${reason}, ${Date.now() - started} ms): ${outcome}`);
+  calendarOutcome = outcome;
+  clearTimeout(calendarRetry);
+  if (!c.error) calendarRetries = 0;
+  else if (calendarRetries < CALENDAR_RETRY.length) {
+    const wait = CALENDAR_RETRY[calendarRetries++];
+    log(`calendar: trying again in ${wait / 1000} s`);
+    calendarRetry = setTimeout(() => refreshCalendar('retry'), wait);
+  }
+}
+
+// fetch with a deadline this function holds itself, covering the body as well as the headers.
+async function fetchText(url, ms = 20000) {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(new Error(`The calendar link didn't answer within ${ms / 1000} s.`)), ms);
+  try {
+    const res = await fetch(url, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' }, signal: abort.signal });
+    if (!res.ok) throw new Error(`The calendar link answered ${res.status}.`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function readCalendars() {
@@ -270,11 +333,11 @@ async function readCalendars() {
   let error = null;
   if (url) {
     try {
-      const res = await fetch(url, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(20000) });
-      if (!res.ok) throw new Error(`The calendar link answered ${res.status}.`);
-      texts.push(await res.text());
+      texts.push(await fetchText(url));
     } catch (err) {
-      error = err.message || 'Could not load the calendar link.';
+      // "fetch failed" alone says little; the cause's code (ENOTFOUND: no network yet) says why.
+      const cause = err.cause && (err.cause.code || err.cause.message);
+      error = `${err.message || 'Could not load the calendar link.'}${cause ? ` (${cause})` : ''}`;
     }
   }
   for (const file of imported.files) {
@@ -314,16 +377,17 @@ async function importCalendar() {
   if (pick.canceled || !pick.filePaths[0]) return { ok: false, canceled: true };
   try {
     const { files } = calendarFiles.importExport(pick.filePaths[0], calendarDir());
-    scheduleCalendar();
+    scheduleCalendar('import');
     return { ok: true, message: `Imported ${files.length} calendar${files.length === 1 ? '' : 's'}.` };
   } catch (err) {
     return { ok: false, error: err.message };
   }
 }
 
-function scheduleCalendar() {
+function scheduleCalendar(reason = 'start') {
   clearInterval(calendarTimer);
-  refreshCalendar();
+  calendarRetries = 0;
+  refreshCalendar(reason);
   calendarTimer = setInterval(refreshCalendar, CALENDAR_EVERY);
 }
 
@@ -333,7 +397,7 @@ function pasteCalendarLink() {
     return { ok: false, error: "The clipboard doesn't hold an iCal link. Copy the \"Secret address in iCal format\" first." };
   }
   writeConfig({ calendarUrl: url });
-  scheduleCalendar();
+  scheduleCalendar('link pasted');
   return { ok: true };
 }
 
@@ -365,34 +429,51 @@ function demoData() {
 }
 
 // ---------- opening at Windows sign-in ----------
-// A per-user Run entry in the registry that starts this Electron with this app folder directly, so
-// no console window flashes at sign-in (Floating Island.cmd would). Toggled from the tray.
-// The entry alone isn't enough: Windows also keeps an approval mark per entry (what Settings >
-// Startup apps flips), and on this PC it skipped the entry at sign-in because it had no mark at all
-// (2026-10-31; it ran only entries marked enabled). Electron didn't write the mark for our entry
-// name, so the island writes it itself with reg.exe, in the bytes Windows uses (02 + zeros = on).
-const loginItem = () => ({ path: process.execPath, args: [app.getAppPath()], name: 'Floating Island' });
-const STARTUP_APPROVED = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
+// A shortcut in the user's Startup folder that starts this Electron with this app folder (no console
+// window, unlike Floating Island.cmd), plus Windows' approval mark for it (what Settings > Startup
+// apps flips: 02 + zeros = on). Toggled from the tray.
+// Why not the registry's Run list: on the author's PC Windows skipped that entry at two sign-ins
+// (2026-10-31), silently, even with its approval mark set, while Startup-folder items ran.
+const STARTUP_LINK = () => path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'Floating Island.lnk');
+const APPROVED = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved';
 
-// 'on', 'off' (switched off in Windows' settings) or null (no mark yet: Windows won't run it).
-function startupMark() {
-  const r = spawnSync('reg.exe', ['query', STARTUP_APPROVED, '/v', 'Floating Island'], { encoding: 'utf8', windowsHide: true });
-  const m = /REG_BINARY\s+([0-9A-F]{2})/i.exec(r.stdout || '');
+const reg = (args) => spawnSync('reg.exe', args, { encoding: 'utf8', windowsHide: true });
+
+// 'on', 'off' (switched off in Windows' settings) or null (no mark: Windows may not run it).
+function approvalMark(list, name) {
+  const m = /REG_BINARY\s+([0-9A-F]{2})/i.exec(reg(['query', `${APPROVED}\\${list}`, '/v', name]).stdout || '');
   if (!m) return null;
   return ['02', '06'].includes(m[1].toUpperCase()) ? 'on' : 'off';
 }
 
+function setApprovalMark(list, name, on) {
+  reg(on
+    ? ['add', `${APPROVED}\\${list}`, '/v', name, '/t', 'REG_BINARY', '/d', '020000000000000000000000', '/f']
+    : ['delete', `${APPROVED}\\${list}`, '/v', name, '/f']);
+}
+
 function opensAtLogin() {
-  const s = app.getLoginItemSettings(loginItem());
-  const entry = s.openAtLogin || (s.launchItems || []).some((i) => i.name === 'Floating Island');
-  return !!entry && startupMark() === 'on';
+  return fs.existsSync(STARTUP_LINK()) && approvalMark('StartupFolder', 'Floating Island.lnk') === 'on';
 }
 
 function setOpenAtLogin(on) {
-  app.setLoginItemSettings({ ...loginItem(), openAtLogin: on });
-  spawnSync('reg.exe', on
-    ? ['add', STARTUP_APPROVED, '/v', 'Floating Island', '/t', 'REG_BINARY', '/d', '020000000000000000000000', '/f']
-    : ['delete', STARTUP_APPROVED, '/v', 'Floating Island', '/f'], { windowsHide: true });
+  // Retire the old Run-list entry, if this PC still has one from an earlier version.
+  app.setLoginItemSettings({ path: process.execPath, args: [app.getAppPath()], name: 'Floating Island', openAtLogin: false });
+  setApprovalMark('Run', 'Floating Island', false);
+  if (on) {
+    fs.mkdirSync(path.dirname(STARTUP_LINK()), { recursive: true });
+    shell.writeShortcutLink(STARTUP_LINK(), 'create', {
+      target: process.execPath,
+      args: `"${app.getAppPath()}"`,
+      cwd: app.getAppPath(),
+      description: 'Floating Island',
+      icon: process.execPath,
+      iconIndex: 0
+    });
+  } else {
+    fs.rmSync(STARTUP_LINK(), { force: true });
+  }
+  setApprovalMark('StartupFolder', 'Floating Island.lnk', on);
 }
 
 // ---------- tray ----------
@@ -510,6 +591,8 @@ function createWindow() {
     if (RECORD_PULL) recordPull();
   });
   win.on('closed', () => { win = null; });
+  win.webContents.on('render-process-gone', (_e, d) => log(`window crashed: ${d.reason} (${d.exitCode})`));
+  win.webContents.on('preload-error', (_e, file, err) => log('preload error:', (err && err.stack) || err));
 }
 
 // The window only takes keyboard focus while you type a note. Electron's setFocusable also flips
@@ -882,8 +965,12 @@ ipcMain.on('open:whatsapp', () => shell.openExternal('whatsapp://'));
 ipcMain.on('open:calendar', () => shell.openExternal('https://calendar.google.com/calendar/r'));
 ipcMain.handle('calendar:paste', () => pasteCalendarLink());
 ipcMain.handle('calendar:import', () => importCalendar());
-ipcMain.on('calendar:refresh', () => refreshCalendar());
-ipcMain.handle('state:current', () => ({ ...last }));
+ipcMain.on('calendar:refresh', () => refreshCalendar('island'));
+ipcMain.handle('state:current', () => {
+  log(`window loaded (calendar configured=${last.calendar.configured}, events=${last.calendar.events.length})`);
+  return { ...last };
+});
+ipcMain.on('island:log', (_e, text) => log('window:', String(text).slice(0, 2000)));
 
 // ---------- lifecycle ----------
 app.whenReady().then(async () => {
@@ -894,7 +981,7 @@ app.whenReady().then(async () => {
     return;
   }
   if (CHECK_CALENDAR) {
-    await refreshCalendar();
+    await refreshCalendar('check');
     const c = last.calendar;
     const now = Date.now();
     const report = {
@@ -911,6 +998,7 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
+  log(`start: v${app.getVersion()}, ${Math.round(os.uptime())} s after Windows started`);
   last.character = readCharacter();
   createWindow();
   startBridge();
@@ -919,6 +1007,10 @@ app.whenReady().then(async () => {
   if (!DEMO) {
     buildTray();
     scheduleCalendar();
+    // After sleep or a locked screen the calendar may be hours old; give the network a moment first.
+    for (const event of ['resume', 'unlock-screen']) {
+      powerMonitor.on(event, () => setTimeout(() => scheduleCalendar(event), 5000));
+    }
     if (!globalShortcut.register(SHORTCUT, () => toggleFromOutside())) {
       console.warn(`[island] ${SHORTCUT} is taken by another app; use the tray icon instead.`);
     }
