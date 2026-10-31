@@ -829,8 +829,8 @@
   // The timeline is drawn on one canvas while the Music page is open: the played part is a squiggly
   // line in the artwork's colour that ripples while the song plays and flattens out when it's
   // paused; the rest is a straight dim line; the loop is pink. The played line glows, a soft light
-  // pulses at the playhead, and petals in the artwork's colours drift off it with little twinkling
-  // sparkles among them. Everything holds still while a loop is being set.
+  // pulses at the playhead, and shining petals in the artwork's colours drift off it, flashing
+  // white as they turn and catch the light. Everything holds still while a loop is being set.
   const SAKURA = ['#ffc2d6', '#ff9ec4', '#ffe1eb'];
   const petalCanvas = $('[data-petals]');
   const petalCtx = petalCanvas.getContext('2d');
@@ -839,7 +839,6 @@
   let petalRaf = 0;
   let petalLast = 0;
   let petalDue = 0;
-  let sparkleDue = 0;
   let squigglePhase = 0;
   let squiggleAmp = 0;
   let squiggleWidth = 3;
@@ -887,48 +886,6 @@
     });
   }
 
-  // A sparkle: a tiny four-point glint, half of them white, that twinkles as it floats up and fades.
-  function spawnSparkle(x, y) {
-    petals.push({
-      spark: true,
-      x: x + (Math.random() - 0.5) * 6,
-      y: y + (Math.random() - 0.5) * 10,
-      vx: -(8 + Math.random() * 26),
-      vy: -(14 + Math.random() * 24),
-      spin: 0,
-      vspin: 0,
-      sway: Math.random() * Math.PI * 2,
-      twinkle: Math.random() * Math.PI * 2,
-      size: 1.6 + Math.random() * 1.6,
-      life: 1,
-      fade: 1 / (0.6 + Math.random() * 0.7),
-      color: Math.random() < 0.5 ? '#ffffff' : petalColors[Math.floor(Math.random() * petalColors.length)]
-    });
-  }
-
-  function drawSparkle(p) {
-    const tw = Math.sin(p.twinkle);
-    const s = p.size * (0.8 + 0.2 * tw);
-    const a = Math.min(1, p.life * 1.6) * (0.65 + 0.35 * tw);
-    petalCtx.save();
-    petalCtx.globalCompositeOperation = 'lighter';
-    petalCtx.translate(p.x, p.y);
-    petalCtx.fillStyle = p.color;
-    petalCtx.globalAlpha = a * 0.22; // the halo
-    petalCtx.beginPath();
-    petalCtx.arc(0, 0, s * 1.6, 0, Math.PI * 2);
-    petalCtx.fill();
-    petalCtx.globalAlpha = a; // the glint: four points curving in to the centre
-    petalCtx.beginPath();
-    petalCtx.moveTo(0, -s * 2);
-    petalCtx.quadraticCurveTo(0, 0, s * 2, 0);
-    petalCtx.quadraticCurveTo(0, 0, 0, s * 2);
-    petalCtx.quadraticCurveTo(0, 0, -s * 2, 0);
-    petalCtx.quadraticCurveTo(0, 0, 0, -s * 2);
-    petalCtx.fill();
-    petalCtx.restore();
-  }
-
   // A soft light at the playhead that breathes with the ripple; gone when paused.
   function drawGlint(x, y) {
     const strength = squiggleAmp / 3.2;
@@ -947,11 +904,10 @@
 
   function drawPetal(p) {
     const s = p.size;
+    const alpha = Math.min(1, p.life * 1.4);
     petalCtx.save();
-    petalCtx.globalAlpha = Math.min(1, p.life * 1.4);
     petalCtx.translate(p.x, p.y);
     petalCtx.rotate(p.spin);
-    petalCtx.fillStyle = p.color;
     // A teardrop with a little notch at the wide end: a cherry-blossom petal.
     petalCtx.beginPath();
     petalCtx.moveTo(0, s);
@@ -959,7 +915,19 @@
     petalCtx.lineTo(0, -s * 0.7);
     petalCtx.lineTo(-s * 0.35, -s);
     petalCtx.quadraticCurveTo(-s * 1.1, -s * 0.1, 0, s);
+    // It shines: a soft glow in its own colour, and a brief white flash whenever, turning and
+    // swaying, it catches the light.
+    petalCtx.globalAlpha = alpha;
+    petalCtx.fillStyle = petalCtx.shadowColor = p.color;
+    petalCtx.shadowBlur = 6;
     petalCtx.fill();
+    const flash = Math.max(0, Math.cos(p.spin * 1.3 + p.sway)) ** 6;
+    if (flash > 0.02) {
+      petalCtx.globalCompositeOperation = 'lighter';
+      petalCtx.globalAlpha = alpha * flash * 0.85;
+      petalCtx.fillStyle = petalCtx.shadowColor = '#ffffff';
+      petalCtx.fill();
+    }
     petalCtx.restore();
   }
 
@@ -1052,16 +1020,13 @@
 
     if (!frozen) {
       const headY = cy;
-      if (moving && petals.length < 56) {
+      if (moving && petals.length < 40) {
         petalDue += dt * 10;
         while (petalDue >= 1) { petalDue -= 1; spawnPetal(headX, headY); }
-        sparkleDue += dt * 9;
-        while (sparkleDue >= 1) { sparkleDue -= 1; spawnSparkle(headX, headY); }
       }
       for (let i = petals.length - 1; i >= 0; i--) {
         const q = petals[i];
-        q.vy += (q.spark ? 12 : 38) * dt;      // a gentle fall; sparkles barely sink
-        if (q.spark) q.twinkle += dt * 16;
+        q.vy += 38 * dt;                       // a gentle fall
         q.sway += dt * 3;
         q.x += (q.vx + Math.sin(q.sway) * 10) * dt;
         q.y += q.vy * dt;
@@ -1070,7 +1035,7 @@
         if (q.life <= 0) petals.splice(i, 1);
       }
     }
-    for (const q of petals) (q.spark ? drawSparkle : drawPetal)(q);
+    for (const q of petals) drawPetal(q);
     petalRaf = requestAnimationFrame(stepPetals);
   }
 
