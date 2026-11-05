@@ -591,7 +591,10 @@ function createWindow() {
     if (RECORD_PULL) recordPull();
   });
   win.on('closed', () => { win = null; });
-  win.webContents.on('render-process-gone', (_e, d) => log(`window crashed: ${d.reason} (${d.exitCode})`));
+  win.webContents.on('render-process-gone', (_e, d) => {
+    log(`window crashed: ${d.reason} (${d.exitCode}); reloading it`);
+    if (!quitting && d.reason !== 'clean-exit') setTimeout(() => win && !win.isDestroyed() && win.reload(), 1000);
+  });
   win.webContents.on('preload-error', (_e, file, err) => log('preload error:', (err && err.stack) || err));
 }
 
@@ -1009,15 +1012,50 @@ app.whenReady().then(async () => {
     scheduleCalendar();
     // After sleep or a locked screen the calendar may be hours old; give the network a moment first.
     for (const event of ['resume', 'unlock-screen']) {
-      powerMonitor.on(event, () => setTimeout(() => scheduleCalendar(event), 5000));
+      powerMonitor.on(event, () => {
+        refreshWindow(event);
+        setTimeout(() => scheduleCalendar(event), 5000);
+      });
     }
     if (!globalShortcut.register(SHORTCUT, () => toggleFromOutside())) {
       console.warn(`[island] ${SHORTCUT} is taken by another app; use the tray icon instead.`);
     }
   }
-  screen.on('display-metrics-changed', place);
-  screen.on('display-added', place);
-  screen.on('display-removed', place);
+  screen.on('display-metrics-changed', () => refreshWindow('screen changed'));
+  screen.on('display-added', () => refreshWindow('screen added'));
+  screen.on('display-removed', () => refreshWindow('screen removed'));
+});
+
+// The see-through window can stop drawing after a screen is plugged in or out, or after sleep: it
+// stays "visible" to Windows but shows nothing (seen 2026-11-05). Re-place it and force a redraw,
+// now and again once Windows has settled.
+function refreshWindow(reason) {
+  log(`redraw: ${reason}`);
+  const redraw = () => {
+    if (!win || win.isDestroyed()) return;
+    place();
+    win.webContents.invalidate();
+  };
+  redraw();
+  setTimeout(redraw, 1500);
+}
+
+// If the graphics process dies, Electron starts a new one, but a transparent window may stay blank.
+// Redraw after each; after three in ten minutes, restart the whole island.
+const gpuCrashes = [];
+app.on('child-process-gone', (_e, d) => {
+  log(`${d.type} process gone: ${d.reason} (${d.exitCode})`);
+  if (d.type !== 'GPU' || DEMO) return;
+  const now = Date.now();
+  gpuCrashes.push(now);
+  while (gpuCrashes.length && now - gpuCrashes[0] > 10 * 60 * 1000) gpuCrashes.shift();
+  if (gpuCrashes.length >= 3) {
+    log('graphics keep failing: restarting the island');
+    app.relaunch();
+    app.quit();
+    return;
+  }
+  setTimeout(() => refreshWindow('graphics restarted'), 1000);
 });
 
 app.on('before-quit', () => {
